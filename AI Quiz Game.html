@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Coding Quiz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f8fafc;
+  --accent: #3b82f6;
+  --success: #22c55e;
+  --danger: #ef4444;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+.container {
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  width: 100%;
+  max-width: 600px;
+  padding: 40px;
+  text-align: center;
+  position: relative;
+}
+h1 { margin-bottom: 20px; font-size: 32px; color: var(--accent); }
+button {
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+button:hover { opacity: 0.9; transform: translateY(-2px); }
+.btn-secondary { background: #334155; color: var(--text); }
+.btn-secondary:hover { background: #475569; }
+.hidden { display: none; }
+.question { font-size: 22px; margin: 20px 0; min-height: 60px; }
+.options { display: grid; gap: 12px; margin-top: 10px; }
+.options button { background: #0f172a; color: var(--text); border: 1px solid var(--accent); }
+.options button.correct { background: var(--success); color: #fff; border-color: var(--success); }
+.options button.wrong { background: var(--danger); color: #fff; border-color: var(--danger); }
+.progress {
+  height: 12px;
+  background: #334155;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 20px 0;
+}
+.progress-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--success);
+  transition: width 1s linear, background 0.5s linear;
+}
+#timer { font-size: 18px; font-weight: 500; margin-bottom: 10px; }
+.score { font-size: 18px; margin: 10px 0; font-weight: 600; }
+#splashScreen {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  color: var(--card);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px;
+  font-weight: 700;
+  border-radius: 20px;
+  transition: opacity 0.5s ease;
+  z-index: 50;
+}
+#splashScreen.hidden { opacity: 0; pointer-events: none; }
+.category-grid, .difficulty-grid { display: grid; gap: 12px; margin-top: 10px; }
+.popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 600;
+  animation: slideIn 0.4s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  z-index: 100;
+}
+.popup.success { background: var(--success); }
+.popup.error { background: var(--danger); }
+@keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div id="splashScreen">
+    🚀 Welcome to AI Coding Quiz! 🚀
+    <button style="margin-top:20px;" onclick="hideSplash()">Start</button>
+  </div>
+
+  <h1>AI Coding Quiz</h1>
+
+  <div id="startScreen" class="hidden">
+    <h2>Select a Category</h2>
+    <div class="category-grid">
+      <button onclick="chooseDifficulty('html')">HTML</button>
+      <button onclick="chooseDifficulty('css')">CSS</button>
+      <button onclick="chooseDifficulty('js')">JavaScript</button>
+      <button onclick="chooseDifficulty('dart')">Dart</button>
+      <button onclick="chooseDifficulty('react')">React</button>
+    </div>
+  </div>
+
+  <div id="difficultyScreen" class="hidden">
+    <h2>Select Difficulty</h2>
+    <div class="difficulty-grid">
+      <button onclick="startGame(selectedCategory,'easy')">Easy</button>
+      <button onclick="startGame(selectedCategory,'medium')">Medium</button>
+      <button onclick="startGame(selectedCategory,'hard')">Hard</button>
+      <button onclick="startGame(selectedCategory,'expert')">Expert</button>
+    </div>
+  </div>
+
+  <div id="quizScreen" class="hidden">
+    <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+    <div id="timer">10s</div>
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+    <div class="score" id="score"></div>
+  </div>
+
+  <div id="endScreen" class="hidden">
+    <div style="padding: 20px; background: linear-gradient(135deg, #3b82f6, #22c55e); border-radius: 20px; color: #fff; text-align:center;">
+      <h2>🎉 Quiz Completed! 🎉</h2>
+      <p id="finalScore">Your Score: 0/0</p>
+      <p id="rating">Your Level: Beginner</p>
+      <div style="margin:20px 0;">
+        <div style="height:12px; width:100%; background:#334155; border-radius:999px; overflow:hidden;">
+          <div id="scoreBar" style="height:100%; width:0%; background:#facc15; transition: width 1s;"></div>
+        </div>
+      </div>
+      <button class="btn-secondary" onclick="restartGame()">Play Again</button>
+    </div>
+    <div style="margin-top:20px;">
+      <h3 style="color: var(--accent);">High Score 🏆</h3>
+      <div id="highScores" style="background: var(--card); border-radius:12px; padding:12px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedCategory;
+const quizScreen=document.getElementById('quizScreen');
+const endScreen=document.getElementById('endScreen');
+const startScreen=document.getElementById('startScreen');
+const difficultyScreen=document.getElementById('difficultyScreen');
+const splashScreen=document.getElementById('splashScreen');
+const questionEl=document.getElementById('question');
+const optionsEl=document.getElementById('options');
+const progressBar=document.getElementById('progressBar');
+const timerEl=document.getElementById('timer');
+const scoreEl=document.getElementById('score');
+
+function hideSplash(){ splashScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); }
+function chooseDifficulty(cat){ selectedCategory=cat; startScreen.classList.add('hidden'); difficultyScreen.classList.remove('hidden'); }
+
+let currentQuestions=[], currentIndex=0, score=0, timer;
+
+function startGame(cat,level){
+  difficultyScreen.classList.add('hidden');
+  quizScreen.classList.remove('hidden');
+  currentQuestions=[...questions[cat][level]].sort(()=>Math.random()-0.5);
+  currentIndex=0; score=0;
+  loadQuestion();
+}
+
+function loadQuestion(){
+  if(currentIndex>=currentQuestions.length) return endGame();
+  const q=currentQuestions[currentIndex];
+  questionEl.textContent=q.q;
+  optionsEl.innerHTML='';
+  q.options.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.textContent=opt;
+    btn.onclick=()=> checkAnswer(i);
+    optionsEl.appendChild(btn);
+  });
+  startTimer();
+  scoreEl.textContent=`Score: ${score}`;
+}
+
+function startTimer(){
+  let time=10;
+  timerEl.textContent=`${time}s`;
+  progressBar.style.transition='none';
+  progressBar.style.width='100%';
+  progressBar.style.background='var(--success)';
+  clearInterval(timer);
+  timer=setInterval(()=>{
+    time--;
+    timerEl.textContent=`${time}s`;
+    const percent=(time/10)*100;
+    progressBar.style.width=percent+'%';
+    if(percent>50) progressBar.style.background='var(--success)';
+    else if(percent>20) progressBar.style.background='#facc15';
+    else progressBar.style.background='var(--danger)';
+    if(time<=0){ clearInterval(timer); checkAnswer(-1); }
+  },1000);
+}
+
+function checkAnswer(choice){
+  clearInterval(timer);
+  const q=currentQuestions[currentIndex];
+  const buttons=optionsEl.querySelectorAll('button');
+  buttons.forEach((b,i)=>{
+    if(i===q.answer) b.classList.add('correct');
+    if(i===choice && i!==q.answer) b.classList.add('wrong');
+    b.disabled=true;
+  });
+  showPopup(choice===q.answer?'Correct!':'Wrong!', choice===q.answer?'success':'error');
+  if(choice===q.answer) score++;
+  setTimeout(()=>{ currentIndex++; loadQuestion(); },1200);
+}
+
+function showPopup(msg,type){
+  const div=document.createElement('div');
+  div.className=`popup ${type}`; div.textContent=msg;
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),1500);
+}
+
+function endGame(){
+  quizScreen.classList.add('hidden');
+  endScreen.classList.remove('hidden');
+  document.getElementById('finalScore').textContent=`Your Score: ${score}/${currentQuestions.length}`;
+  document.getElementById('rating').textContent=`Your Level: ${getRating(score,currentQuestions.length)}`;
+  saveHighScore(score);
+  renderHighScore();
+  animateScoreBar();
+}
+
+function getRating(score,total){
+  const pct=(score/total)*100;
+  if(pct>=90) return 'Expert';
+  if(pct>=70) return 'Advanced';
+  if(pct>=40) return 'Intermediate';
+  return 'Beginner';
+}
+
+function saveHighScore(sc){
+  let scores=JSON.parse(localStorage.getItem('highScores')||'[]');
+  scores.push(sc);
+  const highScore=Math.max(...scores);
+  localStorage.setItem('highScores',JSON.stringify([highScore]));
+}
+
+function renderHighScore(){
+  let scores=JSON.parse(localStorage.getItem('highScores')||'[0]');
+  document.getElementById('highScores').innerHTML=`<div>Score: ${scores[0]}</div>`;
+}
+
+function animateScoreBar(){
+  const scoreBar=document.getElementById('scoreBar');
+  const pct=(score/currentQuestions.length)*100;
+  setTimeout(()=>scoreBar.style.width=pct+'%',200);
+}
+
+function restartGame(){
+  endScreen.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+}
+
+const questions = {
+  html: {
+    easy: [
+      {q:"What does HTML stand for?", options:["HyperText Markup Language","Home Tool Markup Language","Hyper Transfer Markup Language","Hyper Tag Markup Language"], answer:0},
+      {q:"Which tag is used for inserting a line break?", options:["<lb>","<br>","<break>","<ln>"], answer:1},
+      {q:"HTML stands for?", options:["HyperText Markup Language","Hyper Tool Markup Language","Home Text Markup","HyperText Media Language"], answer:0},
+      {q:"Root element of HTML?", options:["<html>","<body>","<head>","<root>"], answer:0},
+      {q:"Metadata tag?", options:["<meta>","<title>","<link>","<style>"], answer:0},
+      {q:"Title tag?", options:["<title>","<h1>","<head>","<header>"], answer:0},
+      {q:"Paragraph tag?", options:["<p>","<para>","<text>","<paragraph>"], answer:0},
+      {q:"Anchor tag?", options:["<a>","<link>","<nav>","<href>"], answer:0},
+      {q:"Image tag?", options:["<img>","<image>","<pic>","<src>"], answer:0},
+      {q:"List tag?", options:["<ul>","<li>","<ol>","All"], answer:3}
+    ],
+    medium: [
+      {q:"HTML comment?", options:["<!-- comment -->","// comment","/* comment */","# comment"], answer:0},
+      {q:"Bold text?", options:["<b>","<strong>","<i>","<em>"], answer:1},
+      {q:"Italic text?", options:["<i>","<em>","<italic>","<it>"], answer:0},
+      {q:"HTML table row?", options:["<tr>","<td>","<th>","<table>"], answer:0},
+      {q:"HTML table data?", options:["<td>","<tr>","<th>","<table>"], answer:0},
+      {q:"HTML table header?", options:["<th>","<td>","<tr>","<table>"], answer:0},
+      {q:"HTML form?", options:["<form>","<input>","<button>","<fieldset>"], answer:0},
+      {q:"HTML input?", options:["<input>","<text>","<field>","<data>"], answer:0},
+      {q:"HTML button?", options:["<button>","<btn>","<input>","<click>"], answer:0},
+      {q:"HTML div?", options:["<div>","<section>","<span>","<container>"], answer:0}
+    ],
+    hard: [
+      {q:"HTML5 semantic tag?", options:["<section>","<div>","<span>","<header>"], answer:0},
+      {q:"Audio tag?", options:["<audio>","<sound>","<media>","<music>"], answer:0},
+      {q:"Video tag?", options:["<video>","<movie>","<media>","<vid>"], answer:0},
+      {q:"Canvas tag?", options:["<canvas>","<drawing>","<paint>","<svg>"], answer:0},
+      {q:"Figure tag?", options:["<figure>","<fig>","<image>","<picture>"], answer:0},
+      {q:"Caption tag?", options:["<figcaption>","<caption>","<title>","<head>"], answer:0},
+      {q:"Input type email?", options:["email","text","password","number"], answer:0},
+      {q:"Input type number?", options:["number","text","email","range"], answer:0},
+      {q:"Input type range?", options:["range","number","text","slider"], answer:0},
+      {q:"Required attribute?", options:["required","mandatory","validate","need"], answer:0}
+    ],
+    expert: [
+      {q:"HTML5 local storage?", options:["localStorage","sessionStorage","cookie","indexedDB"], answer:0},
+      {q:"HTML5 geolocation API?", options:["navigator.geolocation","window.location","document.location","location.api"], answer:0},
+      {q:"WebSocket tag?", options:["<script>","<websocket>","<socket>","<ws>"], answer:0},
+      {q:"HTML5 drag and drop?", options:["draggable","dragdrop","drag","drop"], answer:0},
+      {q:"HTML5 microdata?", options:["itemprop","itemscope","itemtype","itemid"], answer:0},
+      {q:"Data attribute?", options:["data-*","attr-*","custom-*","dataattr"], answer:0},
+      {q:"Main content tag?", options:["<main>","<section>","<div>","<content>"], answer:0},
+      {q:"Mark tag?", options:["<mark>","<highlight>","<strong>","<b>"], answer:0},
+      {q:"Progress tag?", options:["<progress>","<meter>","<range>","<bar>"], answer:0},
+      {q:"Meter tag?", options:["<meter>","<progress>","<range>","<bar>"], answer:0}
+    ]
+  },
+
+  css: {
+    easy: [
+      {q:"Change text color?", options:["color","background","font","text"], answer:0},
+      {q:"CSS stands for?", options:["Cascading Style Sheets","Computer Style Sheets","Colorful Style System","Creative Style Sheets"], answer:0},
+      {q:"Change background?", options:["background-color","color","font","border"], answer:0},
+      {q:"Select ID?", options:["#id",".class","element","*"], answer:0},
+      {q:"Select class?", options:[".class","#id","element","*"], answer:0},
+      {q:"Font size property?", options:["font-size","text-size","size","font-style"], answer:0},
+      {q:"Bold text?", options:["font-weight","font-style","text-weight","text-style"], answer:0},
+      {q:"Hide element?", options:["display:none","visibility:hidden","opacity:0","hide:true"], answer:0},
+      {q:"Text alignment?", options:["text-align","align","font-align","text-position"], answer:0},
+      {q:"CSS comment?", options:["/* comment */","// comment","<!-- comment -->","# comment"], answer:0}
+    ],
+    medium: [
+      {q:"Padding property?", options:["padding","margin","spacing","border"], answer:0},
+      {q:"Margin property?", options:["margin","padding","border","spacing"], answer:0},
+      {q:"Border color?", options:["border-color","color","border-style","background"], answer:0},
+      {q:"Flex row?", options:["flex-direction","justify-content","align-items","flex-wrap"], answer:0},
+      {q:"CSS grid display?", options:["grid","flex","block","inline"], answer:0},
+      {q:"Opacity property?", options:["opacity","visibility","display","color"], answer:0},
+      {q:"Set width?", options:["width","height","size","length"], answer:0},
+      {q:"Hover color?", options:[":hover","hover","onhover","hover-color"], answer:0},
+      {q:"Remove underline?", options:["text-decoration:none","text-decoration:remove","text-decoration:off","underline:none"], answer:0},
+      {q:"First child pseudo-class?", options:[":first-child",":nth-child",":last-child",":child"], answer:0}
+    ],
+    hard: [
+      {q:"Transition property?", options:["transition","transform","animation","effect"], answer:0},
+      {q:"Animation property?", options:["animation","transition","transform","effect"], answer:0},
+      {q:"Border radius?", options:["border-radius","border-style","border","radius"], answer:0},
+      {q:"Z-index?", options:["z-index","stack","order","layer"], answer:0},
+      {q:"Box shadow?", options:["box-shadow","shadow","border-shadow","effect-shadow"], answer:0},
+      {q:"Text overflow?", options:["text-overflow","overflow-text","text-wrap","text-hide"], answer:0},
+      {q:"White-space?", options:["white-space","space","text-space","nowrap"], answer:0},
+      {q:"Hide scrollbar?", options:["overflow:hidden","scroll:none","display:none","overflow:hide"], answer:0},
+      {q:"Cursor property?", options:["cursor","pointer","mouse","hover"], answer:0},
+      {q:"List style?", options:["list-style","style-list","list-type","type-list"], answer:0}
+    ],
+    expert: [
+      {q:"Grid template columns?", options:["grid-template-columns","grid-columns","columns","template-columns"], answer:0},
+      {q:"Gap property?", options:["gap","grid-gap","space","grid-space"], answer:0},
+      {q:"Object-fit?", options:["object-fit","fit","image-fit","object-style"], answer:0},
+      {q:"Clip-path?", options:["clip-path","clip","mask","clip-style"], answer:0},
+      {q:"CSS variables?", options:["--variable","$variable","@variable","var"], answer:0},
+      {q:"Media queries?", options:["@media","media","query","responsive"], answer:0},
+      {q:"Grid areas?", options:["grid-area","area","grid-template-area","area-name"], answer:0},
+      {q:"Writing mode?", options:["writing-mode","text-mode","writing-style","text-orientation"], answer:0},
+      {q:"Scroll snap?", options:["scroll-snap-type","scroll-snap","snap-type","snap"], answer:0},
+      {q:"Object position?", options:["object-position","object","position","image-position"], answer:0}
+    ]
+  },
+
+  js: {
+  easy: [
+    {q:"Which symbol starts a comment in JS?", options:["//","#","<!-- -->","**"], answer:0},
+    {q:"Which company developed JavaScript?", options:["Microsoft","Netscape","Google","Oracle"], answer:1},
+    {q:"What does JS stand for?", options:["JavaScript","JavaStyle","JustScript","JScript"], answer:0},
+    {q:"Output to console?", options:["console.log()","print()","echo()","log()"], answer:0},
+    {q:"Variable declaration keywords?", options:["var","let","const","All of the above"], answer:3},
+    {q:"Strict equality operator?", options:["===","==","=","!="], answer:0},
+    {q:"Function keyword?", options:["function","func","def","fn"], answer:0},
+    {q:"Alert popup?", options:["alert()","msg()","popup()","show()"], answer:0},
+    {q:"JS file extension?", options:[".js",".java",".jsx",".ts"], answer:0},
+    {q:"Add element to array?", options:["push()","add()","append()","insert()"], answer:0}
+  ],
+
+  medium: [
+    {q:"Anonymous function?", options:["function(){}","func(){}","def(){}","anon(){}"], answer:0},
+    {q:"Arrow function?", options:["()=>{}","->{}","function(){}","fn(){}"], answer:0},
+    {q:"Parse JSON?", options:["JSON.parse()","JSON.stringify()","parseJSON()","eval()"], answer:0},
+    {q:"Access object property?", options:["obj.prop","obj['prop']","Both","None"], answer:2},
+    {q:"Array map method?", options:["map()","forEach()","filter()","reduce()"], answer:0},
+    {q:"Promise represents?", options:["Async result","Sync result","Variable","Function"], answer:0},
+    {q:"Add event listener?", options:["addEventListener()","onClick()","listen()","attachEvent()"], answer:0},
+    {q:"Set timeout function?", options:["setTimeout()","setInterval()","wait()","delay()"], answer:0},
+    {q:"Typeof operator?", options:["typeof","instanceof","type","checkType"], answer:0},
+    {q:"Use strict mode?", options:["'use strict'","strict();","enable strict","strict mode"], answer:0}
+  ],
+
+  hard: [
+    {q:"Closures are?", options:["Functions with scope","Objects","Arrays","Events"], answer:0},
+    {q:"IIFE stands for?", options:["Immediately Invoked Function Expression","Infinite Function","Inline Function","Internal Function"], answer:0},
+    {q:"Event bubbling?", options:["Propagation from child to parent","Propagation from parent to child","Event cancel","Event stop"], answer:0},
+    {q:"Debounce purpose?", options:["Limit rapid calls","Trigger events","Timeout","Interval"], answer:0},
+    {q:"Async/Await used for?", options:["Handling promises","Variables","Functions","Loops"], answer:0},
+    {q:"Call vs Apply?", options:["Different ways to set context","Same","Array methods","Promise methods"], answer:0},
+    {q:"Prototype is?", options:["Parent object","Function","Variable","Array"], answer:0},
+    {q:"This keyword?", options:["Refers to object context","Variable","Function","Loop"], answer:0},
+    {q:"Hoisting?", options:["Variable/function lifting","Scope","Loop","Condition"], answer:0},
+    {q:"Event delegation?", options:["Attach to parent","Attach to child","Global event","None"], answer:0}
+  ],
+
+  expert: [
+    {q:"Currying in JS?", options:["Function returning function","Looping","Event","Object"], answer:0},
+    {q:"Memoization?", options:["Cache function results","Loop optimization","Async handling","Event handling"], answer:0},
+    {q:"Generator function?", options:["function*(){}","function(){}","async function(){}","generator(){}"], answer:0},
+    {q:"Symbol type?", options:["Unique identifier","String","Number","Object"], answer:0},
+    {q:"Proxy object?", options:["Intercept operations","Change value","Store value","Event listener"], answer:0},
+    {q:"Reflect API?", options:["Meta-programming","DOM","Event","Array"], answer:0},
+    {q:"WeakMap?", options:["Map with garbage collection","Regular map","Array","Object"], answer:0},
+    {q:"Set vs WeakSet?", options:["WeakSet holds objects only","Both same","Set holds objects only","Both hold primitives"], answer:0},
+    {q:"Async iterator?", options:["Iterate async data","Loop","Map","Filter"], answer:0},
+    {q:"Event loop?", options:["JS concurrency model","DOM","Array","Object"], answer:0}
+   ]
+  },
+
+
+  react: {
+  easy: [
+    {q:"React is developed by?", options:["Google","Facebook","Microsoft","Apple"], answer:1},
+    {q:"Which hook is used for state?", options:["useEffect","useState","useReducer","useRef"], answer:1},
+    {q:"JSX stands for?", options:["JavaScript XML","JavaScript Xtreme","JavaScript Example","JavaScript eXtension"], answer:0},
+    {q:"React component type?", options:["Functional","Class","Both","None"], answer:2},
+    {q:"Virtual DOM is?", options:["Lightweight DOM","Real DOM","JSX","HTML"], answer:0},
+    {q:"React props are?", options:["Immutable","Mutable","Variable","Function"], answer:0},
+    {q:"React key prop?", options:["List identification","Component ID","State","Event"], answer:0},
+    {q:"Fragment full syntax?", options:["<React.Fragment>","<>","<frag>","<fragment>"], answer:0},
+    {q:"Conditional rendering?", options:["Ternary","If","Switch","All"], answer:3},
+    {q:"Default export?", options:["export default","export","import","require"], answer:0}
+  ],
+  medium: [
+    {q:"useEffect used for?", options:["Side effects","State","Props","Rendering"], answer:0},
+    {q:"useReducer purpose?", options:["State management","Effect","Ref","Memo"], answer:0},
+    {q:"Context API?", options:["Global state","Local state","Prop passing","Event"], answer:0},
+    {q:"useRef used for?", options:["DOM reference","State","Effect","Props"], answer:0},
+    {q:"Memoization hook?", options:["useMemo","useEffect","useState","useCallback"], answer:0},
+    {q:"Lazy loading?", options:["React.lazy()","Suspense","useEffect","useState"], answer:0},
+    {q:"ForwardRef?", options:["Pass ref","State","Effect","Props"], answer:0},
+    {q:"Profiler?", options:["Measure performance","Render","State","Effect"], answer:0},
+    {q:"Suspense?", options:["Lazy load","Effect","State","Ref"], answer:0},
+    {q:"Default props?", options:["Set default values","Override values","Change state","Update DOM"], answer:0}
+  ],
+  hard: [
+    {q:"Higher-order component?", options:["Function returns component","Component","Function","Object"], answer:0},
+    {q:"Error boundaries?", options:["Catch render errors","Catch state errors","Effect","Event"], answer:0},
+    {q:"React.StrictMode?", options:["Highlight potential problems","Render","State","Props"], answer:0},
+    {q:"Concurrent mode?", options:["Parallel rendering","State","Effect","Props"], answer:0},
+    {q:"Server components?", options:["Render on server","Client","State","Effect"], answer:0},
+    {q:"Hydration?", options:["Attach server HTML","State","Effect","Prop"], answer:0},
+    {q:"Render props?", options:["Prop as function","Prop as variable","Prop as object","Prop as array"], answer:0},
+    {q:"useCallback?", options:["Memoize function","Effect","State","Ref"], answer:0},
+    {q:"useImperativeHandle?", options:["Customize ref exposure","State","Effect","Props"], answer:0},
+    {q:"Custom hook?", options:["Function starting with use","Class","Object","Variable"], answer:0}
+  ],
+  expert: [
+    {q:"Hooks rules?", options:["Only call at top","Call anywhere","Call in loops","Call in conditions"], answer:0},
+    {q:"JSX transpiler?", options:["Babel","Webpack","Parcel","Rollup"], answer:0},
+    {q:"Concurrent features?", options:["Suspense + Concurrent Mode","Lazy","State","Effect"], answer:0},
+    {q:"React.lazy error?", options:["Catch with Suspense","State","Effect","Prop"], answer:0},
+    {q:"Batching updates?", options:["Combine state updates","Single update","Effect","Prop"], answer:0},
+    {q:"Server-side rendering?", options:["Render React on server","Client only","Effect","State"], answer:0},
+    {q:"Profiler API?", options:["Measure performance","State","Effect","Props"], answer:0},
+    {q:"Strict mode effects?", options:["Identify unsafe lifecycles","State change","Effect","Render"], answer:0},
+    {q:"Forwarding refs use?", options:["Access child ref","State","Effect","Props"], answer:0},
+    {q:"Context.Provider?", options:["Pass data globally","Local state","Render","Effect"], answer:0}
+  ]
+  },
+
+  dart: {
+  easy: [
+    {q:"Dart is mainly used for which framework?", options:["Flutter","React","Vue","Angular"], answer:0},
+    {q:"Dart is a ___ language.", options:["Markup","Styling","Programming","Database"], answer:2},
+    {q:"Dart can run in browsers?", options:["Yes","No","Sometimes","Depends"], answer:0},
+    {q:"Main function in Dart?", options:["void main()","main()","function main()","start()"], answer:0},
+    {q:"Variable declaration keyword?", options:["var","let","const","All"], answer:3},
+    {q:"String declaration?", options:["String name = 'Dart';","string name='Dart';","var name='Dart';","const name='Dart';"], answer:0},
+    {q:"Single line comment?", options:["// comment","/* comment */","<!-- comment -->","# comment"], answer:0},
+    {q:"Multi-line comment?", options:["/* comment */","// comment","<!-- comment -->","# comment"], answer:0},
+    {q:"Dart supports null safety?", options:["Yes","No","Sometimes","Depends"], answer:0},
+    {q:"Dart is developed by?", options:["Google","Microsoft","Apple","Facebook"], answer:0}
+  ],
+  medium: [
+    {q:"Optional parameter syntax?", options:["func([param])","func(param?)","func(param[])","func?()"], answer:0},
+    {q:"Const constructor?", options:["const ClassName()","final ClassName()","var ClassName()","ClassName()"], answer:0},
+    {q:"Run Dart in browser?", options:["DartPad","VSCode","Android Studio","Chrome Dev"], answer:0},
+    {q:"Named parameter?", options:["func({param})","func(param)","func[param]","func?()"], answer:0},
+    {q:"Null aware assignment?", options:["??=","??","=","!"], answer:0},
+    {q:"Cascade operator?", options:["..","->",".","=>"], answer:0},
+    {q:"Spread operator?", options:["...","..","*","&"], answer:0},
+    {q:"Get keyword?", options:["Get property","Set property","Function","Variable"], answer:0},
+    {q:"Set keyword?", options:["Set property","Get property","Function","Variable"], answer:0},
+    {q:"String multiline?", options:["'''text'''","\"text\"","'text'","\"\"\"text\"\"\""], answer:0}
+  ],
+  hard: [
+    {q:"Isolate in Dart?", options:["Independent thread","Function","Variable","Class"], answer:0},
+    {q:"Future represents?", options:["Async computation","Sync computation","Variable","Loop"], answer:0},
+    {q:"Stream used for?", options:["Async events","Sync events","List","Map"], answer:0},
+    {q:"Generics?", options:["Type parameterization","Function","Variable","Loop"], answer:0},
+    {q:"Mixin in Dart?", options:["Class reuse","Interface","Function","Variable"], answer:0},
+    {q:"Factory constructor?", options:["Custom instance creation","Regular constructor","Variable","Function"], answer:0},
+    {q:"Abstract class?", options:["Cannot instantiate","Regular class","Interface","Mixin"], answer:0},
+    {q:"Enum used for?", options:["Named constants","Variables","Functions","Classes"], answer:0},
+    {q:"Late keyword?", options:["Lazy initialization","Eager initialization","Async","Sync"], answer:0},
+    {q:"Extension method?", options:["Add method to class","Override class","Create class","Delete class"], answer:0}
+  ],
+  expert: [
+    {q:"Isolate message passing?", options:["Send/Receive","Function call","Variable","Object"], answer:0},
+    {q:"Zones in Dart?", options:["Async context","Thread","Loop","Function"], answer:0},
+    {q:"Null safety ensures?", options:["Non-null variables","Any variable","Function","Object"], answer:0},
+    {q:"Covariance in Dart?", options:["Type compatibility","Function","Variable","Object"], answer:0},
+    {q:"Operator overloading?", options:["Custom operators","Regular operators","Function","Variable"], answer:0},
+    {q:"Const vs Final?", options:["Compile-time vs run-time","Same","Function","Variable"], answer:0},
+    {q:"Typedef usage?", options:["Function alias","Variable alias","Class alias","Object alias"], answer:0},
+    {q:"Async* function?", options:["Generate stream","Return value","Loop","Function"], answer:0},
+    {q:"Late final?", options:["Assign later once","Assign always","Assign never","Assign multiple"], answer:0},
+    {q:"Mixin application order?", options:["Left to right","Right to left","Random","None"], answer:0}
+   ]
+  },
+
+
+
+
+  }
+
+
+
+
+</script>
+
+</body>
+</html>
